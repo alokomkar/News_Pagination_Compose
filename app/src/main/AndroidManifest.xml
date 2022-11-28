@@ -14,6 +14,7 @@
         android:name="com.alokomkar.starter.NewsApp"
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
+        android:usesCleartextTraffic="true"
         android:theme="@style/Theme.MyApplication"
         tools:targetApi="31">
         <activity

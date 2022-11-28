@@ -31,25 +31,33 @@ class NewsViewModel @Inject constructor(
     }.flow.cachedIn(viewModelScope)
 
 
-    private val _newsState = MutableStateFlow<RequestState<List<NewsEntity>, Error>>(RequestState.Idle)
+    private val _newsState = MutableStateFlow<RequestState<NewsEntity?, Error>>(RequestState.Idle)
     val newsState = _newsState.asStateFlow()
 
-    fun fetchNews(page: Int = 1) {
-        viewModelScope.launch(ioDispatcher) {
-            try {
-                _newsState.value = RequestState.Loading
-                repository.fetchNewsFromPage(
-                    page
-                ).collectLatest {
-                    _newsState.value = RequestState.Success(it)
-                }
-            } catch( e: Exception ) {
-                e.printStackTrace()
-                _newsState.value = RequestState.Error(Error(e.localizedMessage))
-            }
-
-        }
-
+    fun onNewsItemSelection(newsEntity: NewsEntity) {
+        _newsState.value = RequestState.Success(newsEntity)
     }
+
+    fun resetSelection() {
+        _newsState.value = RequestState.Idle
+    }
+
+//    fun fetchNews(page: Int = 1) {
+//        viewModelScope.launch(ioDispatcher) {
+//            try {
+//                _newsState.value = RequestState.Loading
+//                repository.fetchNewsFromPage(
+//                    page
+//                ).collectLatest {
+//                    _newsState.value = RequestState.Success(it)
+//                }
+//            } catch( e: Exception ) {
+//                e.printStackTrace()
+//                _newsState.value = RequestState.Error(Error(e.localizedMessage))
+//            }
+//
+//        }
+//
+//    }
 
 }
