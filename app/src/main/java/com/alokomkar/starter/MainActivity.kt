@@ -1,5 +1,6 @@
 package com.alokomkar.starter
 
+import android.graphics.Bitmap
 import android.os.Bundle
 import android.view.ViewGroup
 import android.webkit.WebView
@@ -21,7 +22,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CornerSize
 import androidx.compose.material.Card
@@ -34,8 +34,10 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -75,15 +77,7 @@ class MainActivity : ComponentActivity() {
 
                     RequestStateRender(
                         state = newsUiState,
-                        onIdle = {
-                           // Do nothing
-                        },
-                        onLoading = {
-                            LoadingScreen()
-                        },
-                        onError = {
-                            ErrorScreen(it.localizedMessage ?: "Something went wrong")
-                        },
+                        onIdle = { /* Do nothing */ },
                         onSuccess = {
                             it?.let {
                                 NewsDetailsScreen(newsEntity = it)
@@ -130,7 +124,7 @@ class MainActivity : ComponentActivity() {
                 is LoadState.Error -> {
                     item {
                         state.error.printStackTrace()
-                        ErrorScreen(error = "Some error occurred")
+                        ErrorScreen(error = "Some error occurred while loading data")
                     }
                 }
             }
@@ -159,23 +153,56 @@ class MainActivity : ComponentActivity() {
 
     @Composable
     private fun NewsDetailsScreen(modifier: Modifier = Modifier, newsEntity: NewsEntity) {
-        BackHandler(onBack = {
-            viewModel.resetSelection()
-        })
-        AndroidView(
-            modifier = modifier.fillMaxSize(),
-            factory = {
-                WebView(it).apply {
-                    layoutParams = ViewGroup.LayoutParams(
-                        ViewGroup.LayoutParams.MATCH_PARENT,
-                        ViewGroup.LayoutParams.MATCH_PARENT
-                    )
-                    webViewClient = WebViewClient()
-                    loadUrl(newsEntity.webUrl)
+
+        var newsDetailsWebView: WebView? = null
+        var isLoading by remember { mutableStateOf(false) }
+        val newsDetailsWebViewClient = remember {
+            object: WebViewClient() {
+                override fun onPageStarted(view: WebView?, url: String?, favicon: Bitmap?) {
+                    super.onPageStarted(view, url, favicon)
+                    //isLoading = true
                 }
-            }, update = {
-                it.loadUrl(newsEntity.webUrl)
-            })
+
+                override fun onPageFinished(view: WebView?, url: String?) {
+                    super.onPageFinished(view, url)
+                    //isLoading = false
+                }
+            }
+        }
+
+        BackHandler(onBack = {
+            if(newsDetailsWebView?.canGoBack() == false) {
+                viewModel.resetSelection()
+            }
+            else {
+                newsDetailsWebView?.goBack()
+            }
+        })
+
+
+        Box(modifier = modifier.fillMaxSize()) {
+            AndroidView(
+                modifier = modifier.fillMaxSize(),
+                factory = {
+                    WebView(it).apply {
+                        layoutParams = ViewGroup.LayoutParams(
+                            ViewGroup.LayoutParams.MATCH_PARENT,
+                            ViewGroup.LayoutParams.MATCH_PARENT
+                        )
+                        webViewClient = newsDetailsWebViewClient
+                        loadUrl(newsEntity.webUrl)
+                    }.also { webView ->
+                        newsDetailsWebView = webView
+                    }
+                }, update = {
+                    it.loadUrl(newsEntity.webUrl)
+                })
+
+            if(isLoading) {
+                LoadingScreen()
+            }
+        }
+
     }
 
 
