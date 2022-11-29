@@ -37,7 +37,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -50,6 +49,7 @@ import androidx.paging.compose.LazyPagingItems
 import androidx.paging.compose.collectAsLazyPagingItems
 import androidx.paging.compose.items
 import com.alokomkar.starter.local.NewsEntity
+import com.alokomkar.starter.ui.details.NewsDetailsWebComponent
 import com.alokomkar.starter.ui.theme.MyApplicationTheme
 import com.alokomkar.starter.utils.RequestStateRender
 import com.alokomkar.starter.viewmodel.NewsViewModel
@@ -104,7 +104,7 @@ class MainActivity : ComponentActivity() {
         ) {
             items(items = newsEntities, key = { news -> news.createdAt }) { news ->
                 news?.let { NewsCardView(news = it) { newsEntity ->
-                    val webUrl = newsEntity.webUrl.ifEmpty { "" }
+                    val webUrl = newsEntity.webUrl
                     if(webUrl.isEmpty()) {
                         Toast.makeText(context, "No webpage available", Toast.LENGTH_SHORT).show()
                     }
@@ -154,31 +154,16 @@ class MainActivity : ComponentActivity() {
     @Composable
     private fun NewsDetailsScreen(modifier: Modifier = Modifier, newsEntity: NewsEntity) {
 
-        var newsDetailsWebView: WebView? = null
-        var isLoading by remember { mutableStateOf(false) }
-        val newsDetailsWebViewClient = remember {
-            object: WebViewClient() {
-                override fun onPageStarted(view: WebView?, url: String?, favicon: Bitmap?) {
-                    super.onPageStarted(view, url, favicon)
-                    //isLoading = true
-                }
-
-                override fun onPageFinished(view: WebView?, url: String?) {
-                    super.onPageFinished(view, url)
-                    //isLoading = false
-                }
-            }
+        val isLoading = remember { mutableStateOf(false) }
+        val newsDetailsWebComponent = remember {
+            NewsDetailsWebComponent(isLoading)
         }
 
         BackHandler(onBack = {
-            if(newsDetailsWebView?.canGoBack() == false) {
+            if(!newsDetailsWebComponent.canGoBack()) {
                 viewModel.resetSelection()
             }
-            else {
-                newsDetailsWebView?.goBack()
-            }
         })
-
 
         Box(modifier = modifier.fillMaxSize()) {
             AndroidView(
@@ -189,22 +174,19 @@ class MainActivity : ComponentActivity() {
                             ViewGroup.LayoutParams.MATCH_PARENT,
                             ViewGroup.LayoutParams.MATCH_PARENT
                         )
-                        webViewClient = newsDetailsWebViewClient
+                        newsDetailsWebComponent.init(this)
                         loadUrl(newsEntity.webUrl)
-                    }.also { webView ->
-                        newsDetailsWebView = webView
                     }
                 }, update = {
-                    it.loadUrl(newsEntity.webUrl)
+                    /* Do nothing */
                 })
 
-            if(isLoading) {
+            if(isLoading.value) {
                 LoadingScreen()
             }
         }
 
     }
-
 
 }
 
